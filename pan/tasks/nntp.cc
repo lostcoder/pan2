@@ -58,10 +58,17 @@ namespace
 {
    enum
    {
-      AUTH_REQUIRED              = 480,
-      AUTH_NEED_MORE             = 381,
       AUTH_ACCEPTED              = 281,
-      AUTH_REJECTED              = 482,
+      AUTH_NEED_MORE             = 381,
+      AUTH_REQUIRED              = 480,
+      AUTH_REJECTED              = 481,
+      AUTH_OUT_OF_SEQ            = 482,
+      AUTH_NEED_TLS              = 483,
+      AUTH_SASL_ACCPT_DATA       = 283,
+      AUTH_SASL_CONT             = 383,
+
+      TLS_MORE                   = 382,
+      TLS_CANT_START             = 580,
 
       SERVER_READY               = 200,
       SERVER_READY_NO_POSTING    = 201,
@@ -95,7 +102,8 @@ namespace
       ERROR_CMD_NOT_UNDERSTOOD   = 500,
       ERROR_CMD_NOT_SUPPORTED    = 501,
       NO_PERMISSION              = 502,
-      FEATURE_NOT_SUPPORTED      = 503
+      FEATURE_NOT_SUPPORTED      = 503,
+      ERROR_BASE64_DECODE        = 504
    };
 }
 
@@ -231,6 +239,9 @@ NNTP :: on_socket_response (Socket * sock UNUSED, const StringView& line_in)
          break;
 
       case AUTH_REJECTED:
+      case AUTH_NEED_TLS:
+      case AUTH_OUT_OF_SEQ:
+      case TLS_CANT_START:
       case NO_GROUP_SELECTED:
       case ERROR_CMD_NOT_UNDERSTOOD:
       case ERROR_CMD_NOT_SUPPORTED:
