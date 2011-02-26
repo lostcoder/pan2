@@ -221,6 +221,12 @@ namespace pan
        */
       void noop             (Listener           * l);
 
+      /**
+       * Executes a POST command: "POST"
+       *
+       * Listener::on_nntp_done() will be called whether the
+       * command is successful or not.
+       */
       void post             (const StringView   & message,
                              Listener           * l);
 
