@@ -263,7 +263,7 @@ NNTP_Pool :: request_nntp (WorkerPool& threadpool)
             << "max: " << max << ' ' << std::endl;
 #endif
 
-  if (!idle && ((pending+active)<max) && new_connections_are_allowed())
+  if (!idle && !pending && ((pending+active)<max) && new_connections_are_allowed())
   {
     debug ("trying to create a socket");
 
