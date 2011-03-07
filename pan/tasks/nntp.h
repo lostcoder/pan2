@@ -30,6 +30,7 @@
 
 namespace pan
 {
+  class Handshake;
   /**
    * Asynchronously processes NNTP protocol commands.
    *
@@ -102,13 +103,12 @@ namespace pan
           _listener(0),
           _username(username),
           _password(password),
-          _nntp_response_text(false)
+          _nntp_response_text(false),
+          hs(0)
        {
        }
 
-       virtual ~NNTP ()
-       {
-       }
+       virtual ~NNTP ();
 
     public:
 
@@ -265,6 +265,9 @@ namespace pan
       virtual bool on_socket_response (Socket*, const StringView& line);
       virtual void on_socket_error (Socket*);
       virtual void on_socket_abort (Socket*);
+
+      Handshake *hs;
+      friend class Handshake;
 
     public:
 

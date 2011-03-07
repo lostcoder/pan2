@@ -80,6 +80,7 @@ namespace
       GROUP_NONEXISTENT          = 411,
 
       INFORMATION_FOLLOWS        = 215,
+      CAPABILITY_LIST            = 101,
 
       XOVER_FOLLOWS              = 224,
       XOVER_NO_ARTICLES          = 420,
@@ -105,6 +106,51 @@ namespace
       FEATURE_NOT_SUPPORTED      = 503,
       ERROR_BASE64_DECODE        = 504
    };
+}
+
+namespace pan {
+  class Handshake: public NNTP::Listener
+  {
+    enum State {
+      INIT,
+      START,
+      CAPABILITY,
+      TLS,
+      SASL,
+      AUTH_U,
+      AUTH_P,
+      MODE,
+      DONE
+    };
+    NNTP &nntp;
+    NNTP::Listener *pool;
+    State state;
+
+    public:
+      Handshake (NNTP &con, NNTP::Listener *l): nntp(con), pool(l), state(INIT),
+        has_capability(true), tls(false)
+      {}
+      void start () { step (); }
+      void on_nntp_line (NNTP * nntp, const StringView   & line);
+      void on_nntp_done (NNTP * nntp, Health health, const StringView & response);
+
+      bool has_capability;
+      bool has_mode;
+      bool has_over;
+      bool has_auth;
+      bool has_sasl;
+      bool has_tls;
+      bool tls;
+      std::string sasl_mech;
+
+    private:
+      void step ();
+  };
+};
+
+NNTP::~NNTP ()
+{
+  if (hs) delete hs;
 }
 
 void
@@ -168,33 +214,15 @@ NNTP :: on_socket_response (Socket * sock UNUSED, const StringView& line_in)
          state = CMD_DONE;
          break;
 
-      case AUTH_REQUIRED: { // must send username
-         if (!_username.empty()) {
-           _commands.push_front (_previous_command);
-           _socket->write_command_va (this, "AUTHINFO USER %s\r\n", _username.c_str());
-           state = CMD_NEXT;
-         } else {
-           std::string host;
-           _socket->get_host (host);
-           Log::add_err_va (_("%s requires a username, but none is set."), host.c_str());
-           state = CMD_FAIL;
-         }
-         break;
-      }
-
-      case AUTH_NEED_MORE: { // must send password
-        if (!_password.empty()) {
-           _socket->write_command_va (this, "AUTHINFO PASS %s\r\n", _password.c_str());
-           state = CMD_NEXT;
-        } else {
-           std::string host;
-           _socket->get_host (host);
-           Log::add_err_va (_("%s requires a password, but none is set."), host.c_str());
-           state = CMD_FAIL;
+      case AUTH_REQUIRED: {
+        std::string host;
+        _socket->get_host (host);
+        Log::add_err_va (_("%s requires a username, but none is set."), host.c_str());
         }
+        state = CMD_FAIL;
         break;
-      }
 
+      case AUTH_NEED_MORE:
       case AUTH_ACCEPTED:
          state = CMD_DONE;
          break;
@@ -230,6 +258,7 @@ NNTP :: on_socket_response (Socket * sock UNUSED, const StringView& line_in)
          state = CMD_FAIL;
          break;
 
+      case CAPABILITY_LIST:
       case XOVER_FOLLOWS:
       case ARTICLE_FOLLOWS:
       case NEWGROUPS_FOLLOWS:
@@ -349,14 +378,17 @@ NNTP :: xover (const Quark   & group,
                uint64_t        high,
                Listener      * l)
 {
-   _listener = l;
+  _listener = l;
 
-   if (group != _group)
-      _commands.push_back (build_command ("GROUP %s\r\n", group.c_str()));
+  if (group != _group)
+    _commands.push_back (build_command ("GROUP %s\r\n", group.c_str()));
 
-   _commands.push_back (build_command ("XOVER %"G_GUINT64_FORMAT"-%"G_GUINT64_FORMAT"\r\n", low, high));
+  if (hs->has_over)
+    _commands.push_back (build_command ("OVER %"G_GUINT64_FORMAT"-%"G_GUINT64_FORMAT"\r\n", low, high));
+  else
+    _commands.push_back (build_command ("XOVER %"G_GUINT64_FORMAT"-%"G_GUINT64_FORMAT"\r\n", low, high));
 
-   write_next_command ();
+  write_next_command ();
 }
 
 void
@@ -416,7 +448,6 @@ NNTP :: group (const Quark  & group,
    write_next_command ();
 }
 
-
 void
 NNTP :: goodbye (Listener * l)
 {
@@ -428,7 +459,10 @@ NNTP :: goodbye (Listener * l)
 void
 NNTP :: handshake (Listener * l)
 {
-  _listener = l;
+  hs = new Handshake(*this, l);
+  _listener = static_cast<Listener*>(hs);
+  hs->start();
+/*  _listener = l;
 
   // queue up two or three commands:
   // (1) handshake, which is an empty string
@@ -443,6 +477,7 @@ NNTP :: handshake (Listener * l)
   _commands.push_back ("MODE READER\r\n");
 
   write_next_command ();
+*/
 }
 
 void
@@ -494,4 +529,156 @@ NNTP :: post (const StringView  & msg,
     _commands.push_back ("POST\r\n");
     write_next_command ();
   }
+}
+
+void Handshake::step()
+{
+  switch(state)
+  {
+    case INIT:
+      state = START;
+    case START:
+      nntp._commands.push_back ("");
+      nntp.write_next_command ();
+      break;
+    case CAPABILITY:
+      if (has_capability)
+      {
+        nntp._listener = this;
+        nntp._commands.push_back("CAPABILITIES\r\n");
+        nntp.write_next_command ();
+        break;
+      }
+      state = AUTH_U;
+    case AUTH_U:
+      if (has_auth && !nntp._username.empty()) {
+        char buf[512];
+        nntp._listener = this;
+        snprintf (buf, sizeof(buf), "AUTHINFO USER %s\r\n", nntp._username.c_str());
+        nntp._commands.push_back (buf);
+        nntp.write_next_command ();
+        break;
+      }
+    case AUTH_P:
+      if (state == AUTH_P && !nntp._password.empty()) {
+        char buf[512];
+        nntp._listener = this;
+        snprintf (buf, sizeof(buf), "AUTHINFO PASS %s\r\n", nntp._username.c_str());
+        nntp._commands.push_back (buf);
+        nntp.write_next_command ();
+        break;
+      }
+      state = MODE;
+    case MODE:
+      if (has_mode) {
+        nntp._listener = this;
+        nntp._commands.push_back ("MODE READER\r\n");
+        nntp.write_next_command ();
+        break;
+      }
+      state = DONE;
+    case DONE:
+      break;
+
+    case SASL:
+    case TLS:
+      break;
+  }
+}
+
+void Handshake::on_nntp_line (NNTP * nntp, const StringView   & line)
+{
+  if (state == CAPABILITY)
+  {
+    if (line.strncasecmp ("STARTTLS", 8) == 0)
+      has_tls = true;
+    else if (line.strncasecmp ("MODE READER", 11) == 0)
+      has_mode = true;
+    else if (line.strncasecmp ("OVER", 4) == 0)
+      has_over = true;
+    else if (line.strncasecmp ("AUTHINFO", 8) == 0)
+    {
+      if (line.strstr ("USER"))
+        has_auth = true;
+      if (line.strstr ("SASL"))
+        has_sasl = true;
+    }
+    else if (line.strncasecmp ("SASL", 4) == 0)
+    {
+      StringView temp (line);
+      temp.rtruncate (5);
+      temp.trim ();
+      sasl_mech = temp.to_string ();
+    }
+  }
+}
+
+void Handshake::on_nntp_done (NNTP * nntp, Health health, const StringView & response)
+{
+  std::string host;
+  nntp->_socket->get_host(host);
+
+  if (health == ERR_NETWORK || health == ERR_LOCAL)
+  {
+    state = DONE;
+    pool->on_nntp_done(nntp, health, response);
+    return;
+  }
+  switch(state)
+  {
+    case START:
+      if (health != OK)
+      {
+        state = DONE;
+        pool->on_nntp_done(nntp, health, response);
+      }
+      else
+        state = CAPABILITY;
+      break;
+    case CAPABILITY:
+      if (health == ERR_COMMAND)
+      {
+        has_capability = false;
+        has_mode = true;
+        has_auth = true;
+        has_tls = false;
+        has_sasl = false;
+        has_over = false;
+        tls = false;
+      }
+      state = AUTH_U;
+      break;
+    case TLS:
+      if (health != OK)
+           Log::add_err_va (_("%s requires a username, but none is set."), host.c_str());
+      break;
+    case SASL:
+           Log::add_err_va (_("%s requires a username, but none is set."), host.c_str());
+      break;
+    case AUTH_U:
+      state = AUTH_P;
+      if (health == ERR_COMMAND)
+      {
+        state = MODE;
+        Log::add_err_va (_("AUTH username for %s not accepted."), host.c_str());
+      }
+      break;
+    case AUTH_P:
+      state = MODE;
+      if (health == ERR_COMMAND)
+        Log::add_err_va (_("AUTH password for %s not accepted."), host.c_str());
+      break;
+    case MODE:
+      state = DONE;
+      break;
+    case INIT:
+    case DONE:
+      break;
+  }
+
+  step();
+
+  if (state == DONE)
+    pool->on_nntp_done(nntp, OK, "");
+
 }
