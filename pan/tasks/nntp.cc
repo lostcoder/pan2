@@ -59,7 +59,7 @@ namespace
    enum
    {
       AUTH_ACCEPTED              = 281,
-      AUTH_NEED_MORE             = 381,
+      AUTH_NEED_MORE             = 381, // password required
       AUTH_REQUIRED              = 480,
       AUTH_REJECTED              = 481,
       AUTH_OUT_OF_SEQ            = 482,
@@ -115,6 +115,7 @@ namespace pan {
       INIT,
       START,
       CAPABILITY,
+      STARTTLS,
       TLS,
       SASL,
       AUTH_U,
@@ -128,7 +129,8 @@ namespace pan {
 
     public:
       Handshake (NNTP &con, NNTP::Listener *l): nntp(con), pool(l), state(INIT),
-        has_capability(true), tls(false)
+        has_capability(true), has_mode(false), has_over(false), has_post(false),
+        tls(false), auth(false)
       {}
       void start () { step (); }
       void on_nntp_line (NNTP * nntp, const StringView   & line);
@@ -137,10 +139,12 @@ namespace pan {
       bool has_capability;
       bool has_mode;
       bool has_over;
+      bool has_post;
       bool has_auth;
       bool has_sasl;
       bool has_tls;
       bool tls;
+      bool auth;
       std::string sasl_mech;
 
     private:
@@ -544,6 +548,10 @@ void Handshake::step()
     case CAPABILITY:
       if (has_capability)
       {
+        has_auth = false;
+        has_tls = false;
+        has_sasl = false;
+        has_post = false;
         nntp._listener = this;
         nntp._commands.push_back("CAPABILITIES\r\n");
         nntp.write_next_command ();
@@ -579,9 +587,17 @@ void Handshake::step()
       state = DONE;
     case DONE:
       break;
+    case STARTTLS:
+      nntp._listener = this;
+      nntp_commands.push_back ("STARTTLS\r\n");
+      nntp.write_next_command ();
+      break;
+    case TLS:
+      nntp._listener = this;
+      _socket->handshake ();
+      break;
 
     case SASL:
-    case TLS:
       break;
   }
 }
@@ -596,6 +612,8 @@ void Handshake::on_nntp_line (NNTP * nntp, const StringView   & line)
       has_mode = true;
     else if (line.strncasecmp ("OVER", 4) == 0)
       has_over = true;
+    else if (line.strncasecmp ("POST", 4) == 0)
+      has_post = true;
     else if (line.strncasecmp ("AUTHINFO", 8) == 0)
     {
       if (line.strstr ("USER"))
@@ -644,13 +662,42 @@ void Handshake::on_nntp_done (NNTP * nntp, Health health, const StringView & res
         has_tls = false;
         has_sasl = false;
         has_over = false;
+        has_post = true;
         tls = false;
       }
-      state = AUTH_U;
+      if (has_tls && ! tls)
+        state = STARTTLS;
+      else if (has_auth && !auth)
+        state = AUTH_U;
+      else if (has_mode)
+        state = MODE;
+      else
+        state = DONE;
+      break;
+    case STARTTLS:
+      if (health == OK)
+        state = TLS;
+      else if (has_auth)
+        state = AUTH_U;
+      else if (has_mode)
+        state = MODE;
+      else
+        state = DONE;
       break;
     case TLS:
       if (health != OK)
-           Log::add_err_va (_("%s requires a username, but none is set."), host.c_str());
+        Log::add_err_va (_("TLS negotiation failed."), host.c_str());
+      else
+        tls = true;
+      if (tls)
+        // capabilities can change after encryption
+        state = CAPABILITY;
+      else if (has_auth)
+        state = AUTH_U;
+      else if (has_mode)
+        state = MODE;
+      else
+        state = DONE;
       break;
     case SASL:
            Log::add_err_va (_("%s requires a username, but none is set."), host.c_str());
@@ -659,12 +706,24 @@ void Handshake::on_nntp_done (NNTP * nntp, Health health, const StringView & res
       state = AUTH_P;
       if (health == ERR_COMMAND)
       {
-        state = MODE;
+        if (has_mode)
+          state = MODE;
+        else
+          state = DONE;
         Log::add_err_va (_("AUTH username for %s not accepted."), host.c_str());
       }
       break;
     case AUTH_P:
-      state = MODE;
+      if (health == OK)
+      {
+        auth = true;
+        // capabilities may change after authorization
+        state = CAPABILITY;
+      }
+      else if (has_mode)
+        state = MODE;
+      else
+        state = DONE;
       if (health == ERR_COMMAND)
         Log::add_err_va (_("AUTH password for %s not accepted."), host.c_str());
       break;

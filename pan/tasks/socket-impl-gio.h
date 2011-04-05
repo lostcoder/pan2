@@ -41,26 +41,28 @@ namespace pan
       virtual void write_command (const StringView& chars, Listener *);
       virtual void get_host (std::string& setme) const;
 
-    private:
+    protected:
       GIOChannel * _channel;
-      unsigned int _tag_watch;
-      unsigned int _tag_timeout;
       Listener * _listener;
       GString * _out_buf;
       GString * _in_buf;
       std::string _partial_read;
-      std::string _host;
       bool _io_performed;
-
-    private:
+      enum DoResult { IO_ERR, IO_READ, IO_WRITE, IO_DONE };
+      virtual DoResult do_read ();
+      virtual DoResult do_write ();
       enum WatchMode { READ_NOW, WRITE_NOW, IGNORE_NOW };
       void set_watch_mode (WatchMode mode);
+
+    private:
+      unsigned int _tag_watch;
+      unsigned int _tag_timeout;
+      std::string _host;
+
+    private:
       static gboolean gio_func (GIOChannel*, GIOCondition, gpointer);
       gboolean gio_func (GIOChannel*, GIOCondition);
       static gboolean timeout_func (gpointer);
-      enum DoResult { IO_ERR, IO_READ, IO_WRITE, IO_DONE };
-      DoResult do_read ();
-      DoResult do_write ();
 
     public:
 
