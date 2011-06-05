@@ -27,7 +27,7 @@ namespace pan
 
     private:
       Data& _data;
-      const Article _article;
+      const Article &_article;
       Quark _group;
       GtkWidget * _root;
       GtkWidget * _section_menu;

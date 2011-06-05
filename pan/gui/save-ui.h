@@ -44,7 +44,7 @@ namespace pan
                   Queue                       & queue,
                   GtkWindow                   * parent_window,
                   const Quark                 & group,
-                  const std::vector<Article>  & articles);
+                  const std::vector<const Article*>    & articles);
 
 
       ~SaveDialog () {}
@@ -62,7 +62,7 @@ namespace pan
       GtkWidget * _save_path_entry;
       GtkWidget * _save_custom_path_radio;
       GtkWidget * _save_group_path_radio;
-      std::vector<Article> _articles;
+      std::vector<ArticleNZB> _articles;
 
     private:
       static void response_cb (GtkDialog*, int, gpointer);
