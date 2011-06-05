@@ -173,7 +173,7 @@ namespace pan
 
         private:
           static Quark build_short_author (const Article * article) {
-            return Quark (GNKSA :: get_short_author_name (article->author.c_str()));
+            return Quark (GNKSA :: get_short_author_name (article->get_author().c_str()));
           }
 
         private:
@@ -210,7 +210,7 @@ namespace pan
           // lazy instantation... it's expensive and user might never sort by this key
           char* get_collated_subject () const {
             if (!collated_subject)
-                 collated_subject = do_collate (article->subject.to_view());
+                 collated_subject = do_collate (article->get_subject().to_view());
             return collated_subject;
           }
 
@@ -249,7 +249,7 @@ namespace pan
               case COL_BYTES:            set_value_ulong (setme, article->get_byte_count()); break;
               case COL_DATE:             set_value_ulong (setme, (unsigned long)article->time_posted); break;
               case COL_ARTICLE_POINTER:  set_value_pointer (setme, (void*)article); break;
-              case COL_SUBJECT:          set_value_static_string (setme, article->author.c_str()); break;
+              case COL_SUBJECT:          set_value_static_string (setme, article->get_author().c_str()); break;
               case COL_SHORT_AUTHOR:     set_value_static_string (setme, short_author.c_str()); break;
             }
           }
@@ -258,13 +258,13 @@ namespace pan
       struct RowLessThan
       {
         bool operator () (const Row* a, const Row* b) const {
-          return a->article->message_id < b->article->message_id;
+          return a->article->get_message_id() < b->article->get_message_id();
         }
         bool operator () (const Row* a, const Quark& b) const {
-          return a->article->message_id < b;
+          return a->article->get_message_id() < b;
         }
         bool operator () (const Quark& a, const Row* b) const {
-          return a < b->article->message_id;
+          return a < b->article->get_message_id();
         }
       };
 

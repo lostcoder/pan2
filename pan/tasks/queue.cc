@@ -478,7 +478,7 @@ Queue :: add_tasks (const tasks_t& tasks, AddMode mode)
   foreach_const (tasks_t, tasks, it) {
     TaskArticle * ta (dynamic_cast<TaskArticle*>(*it));
     if (ta)
-      _mids.insert (ta->get_article().message_id);
+      _mids.insert (ta->get_article().get_message_id());
   }
 
   if (mode == TOP)
@@ -546,7 +546,7 @@ Queue :: remove_task (Task * task)
   {
     TaskArticle * ta (dynamic_cast<TaskArticle*>(task));
     if (ta)
-      _mids.erase (ta->get_article().message_id);
+      _mids.erase (ta->get_article().get_message_id());
 
     _stopped.erase (task);
     _removing.erase (task);

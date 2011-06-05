@@ -182,7 +182,7 @@ DataImpl :: xover_ref (const Quark& group)
     const Quark& mid (it->first);
     const Article * a (it->second->_article);
     if (a != 0)
-      workarea._subject_lookup.insert (std::pair<Quark,Quark>(a->subject,mid));
+      workarea._subject_lookup.insert (std::pair<Quark,Quark>(a->get_subject(),mid));
   }
 }
 

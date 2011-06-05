@@ -1014,7 +1014,7 @@ void GUI :: set_selected_thread_score (int score)
   StringView v(references), tok;
   v.pop_token (tok);
   if (tok.empty())
-    tok = article->message_id.c_str();
+    tok = article->get_message_id().c_str();
 
   // if this is the article or a descendant...
   Scorefile::AddItem items[2];
@@ -1205,7 +1205,7 @@ void GUI :: do_delete_article ()
 
   const Quark mid (_body_pane->get_message_id());
   foreach_const (std::set<const Article*>, articles, it)
-    if ((*it)->message_id == mid)
+    if ((*it)->get_message_id() == mid)
       _body_pane->clear ();
 }
 
@@ -1543,8 +1543,8 @@ void GUI :: do_show_selected_article_info ()
         "<b>%s</b>: %lu\n" "<b>%s</b>: %lu\n"
         "\n"
         "%s" "%s",
-        _("Subject"), a->subject.c_str(), _("From"), a->author.c_str(),
-        _("Date"), date, _("Message-ID"), a->message_id.c_str(),
+        _("Subject"), a->get_subject().c_str(), _("From"), a->get_author().c_str(),
+        _("Date"), date, _("Message-ID"), a->get_message_id().c_str(),
         _("Lines"), a->get_line_count(), _("Bytes"), a->get_byte_count(),
         msg, s.str().c_str());
     g_signal_connect_swapped (w, "response", G_CALLBACK (gtk_widget_destroy), w);

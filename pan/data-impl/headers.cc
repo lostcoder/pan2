@@ -731,7 +731,7 @@ DataImpl :: save_headers (DataIO                       & data_io,
     // author lookup section
     frequency.clear ();
     foreach_const (std::vector<Article*>, articles, ait)
-      ++frequency[(*ait)->author];
+      ++frequency[(*ait)->get_author()];
     QuarkToSymbol author_qts;
     build_qts (frequency, author_qts);
     author_qts.write (out, "author shorthand count");
@@ -871,7 +871,7 @@ DataImpl :: mark_read (const Article  ** articles,
     foreach_const (Xref, article->xref, xit) {
       const bool old_state (_read_groups[xit->group][xit->server]._read.mark_one (xit->number, read));
       if (!old_state != !read)
-        group_to_changed_mids[xit->group].insert (article->message_id);
+        group_to_changed_mids[xit->group].insert (article->get_message_id());
     }
   }
 
@@ -1091,8 +1091,8 @@ DataImpl :: delete_articles (const unique_articles_t& articles)
       PerGroup& per (per_groups[*git]);
       ++per.count;
       if (!was_read) ++per.unread;
-      per.mids.insert (article->message_id);
-      all_mids.insert (article->message_id);
+      per.mids.insert (article->get_message_id());
+      all_mids.insert (article->get_message_id());
     }
   }
 
