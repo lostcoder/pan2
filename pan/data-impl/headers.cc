@@ -480,7 +480,7 @@ DataImpl :: load_headers (const DataIO   & data_io,
         if (s.empty() || *s.str!='<') // not a message-id...
           continue;
 
-        Article& a (h->alloc_new_article());
+        ArticleImpl& a (h->alloc_new_article());
         a.message_id = s;
 
         // subject line
