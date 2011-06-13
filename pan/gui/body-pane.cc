@@ -1024,7 +1024,7 @@ namespace
     const std::string utf8_val (header_to_utf8 (val, fallback_charset));
     e = g_markup_printf_escaped ("%s\n", utf8_val.c_str());
     s += e;
-    const size_t retval (g_utf8_strlen(key,-1) + g_utf8_strlen(utf8_val.c_str(),-1) + 2);
+    const size_t retval (g_utf8_strlen(key_i18n,-1) + g_utf8_strlen(utf8_val.c_str(),-1) + 2);
     g_free (e);
     return retval;
   }
