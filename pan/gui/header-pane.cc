@@ -274,7 +274,7 @@ HeaderPane :: render_subject (GtkTreeViewColumn * ,
   const bool bold (!row->is_read);
 
   const Article * a (self->get_article (model, iter));
-  const char * text (a->subject.c_str());
+  const char * text (a->get_subject().c_str());
   char buf[512];
 
   bool underlined (false);
@@ -312,7 +312,7 @@ HeaderPane::Row*
 HeaderPane :: create_row (const EvolutionDateMaker & e,
                           const Article            * a)
 {
-  const int action (get_article_action (_cache, _queue, a->message_id));
+  const int action (get_article_action (_cache, _queue, a->get_message_id()));
   const int state (get_article_state (_data, a));
   char * date_str (e.get_date_string (a->time_posted));
   Row * row = new Row (_data, a, date_str, action, state);
@@ -351,7 +351,7 @@ HeaderPane ::  add_children_to_model (PanTreeStore               * store,
 
   // recurse
   for (size_t i=0, n=children.size(); i<n; ++i)
-    add_children_to_model (store, rows[i], children[i]->message_id, atree, date_maker, do_thread);
+    add_children_to_model (store, rows[i], children[i]->get_message_id(), atree, date_maker, do_thread);
 }
 
 int
@@ -487,7 +487,7 @@ HeaderPane :: rebuild ()
   if (1) {
     const articles_t old_selection (get_full_selection ());
     foreach_const (articles_t, old_selection, it)
-      selectme.insert ((*it)->message_id);
+      selectme.insert ((*it)->get_message_id());
   }
 
   _mid_to_row.clear ();
@@ -576,7 +576,7 @@ void
 HeaderPane :: rebuild_all_article_states ()
 {
   foreach (mid_to_row_t, _mid_to_row, it)
-    rebuild_article_state ((*it)->article->message_id);
+    rebuild_article_state ((*it)->article->get_message_id());
 }
 
 void
@@ -601,7 +601,7 @@ namespace
     ArticleIsNotInSet (const quarks_t& m): mids(m) {}
     virtual ~ArticleIsNotInSet () {}
     virtual bool operator()(const Article& a) const {
-      return !mids.count(a.message_id);
+      return !mids.count(a.get_message_id());
     }
   };
 
@@ -611,7 +611,7 @@ namespace
     RememberMessageId (quarks_t& m): mids(m) {}
     virtual ~RememberMessageId() {}
     virtual void operator() (GtkTreeModel*, GtkTreeIter*, const Article& article) {
-      mids.insert (article.message_id);
+      mids.insert (article.get_message_id());
     }
   };
 }
@@ -643,8 +643,8 @@ HeaderPane :: on_tree_change (const Data::ArticleTree::Diffs& diffs)
   const article_v old_selection (get_full_selection_v ());
   quarks_t new_selection;
   foreach_const (article_v, old_selection, it)
-    if (!diffs.removed.count ((*it)->message_id))
-        new_selection.insert ((*it)->message_id);
+    if (!diffs.removed.count ((*it)->get_message_id()))
+        new_selection.insert ((*it)->get_message_id());
 
   // if the old selection survived,
   // is it visible on the screen?
@@ -962,7 +962,7 @@ namespace
 {
   bool has_image_type_in_subject (const Article& a)
   {
-    const StringView s (a.subject.to_view());
+    const StringView s (a.get_subject().to_view());
     return s.strstr(".jpg") || s.strstr(".JPG") ||
            s.strstr(".gif") || s.strstr(".GIF") ||
            s.strstr(".jpeg") || s.strstr(".JPEG") ||
@@ -1792,11 +1792,11 @@ namespace
   struct ArticleIsParentOf: public ArticleTester {
     virtual ~ArticleIsParentOf () {}
     ArticleIsParentOf (const Data::ArticleTree& tree, const Article* a) {
-      const Article * parent = a ? tree.get_parent(a->message_id) : 0;
-      _mid = parent ? parent->message_id : "";
+      const Article * parent = a ? tree.get_parent(a->get_message_id()) : 0;
+      _mid = parent ? parent->get_message_id() : "";
     }
     Quark _mid;
-    virtual bool operator()(const Article& a) const { return _mid==a.message_id; }
+    virtual bool operator()(const Article& a) const { return _mid==a.get_message_id(); }
   };
 
   struct ArticleIsUnread: public ArticleTester {
@@ -1815,7 +1815,7 @@ namespace
     const Quark _root;
     Quark get_root_mid (const Article * a) const {
       for (;;) {
-        const Quark mid (a->message_id);
+        const Quark mid (a->get_message_id());
         const Article * parent = _tree.get_parent (mid);
         if (!parent)
           return mid;
@@ -2057,7 +2057,7 @@ HeaderPane :: on_queue_tasks_added (Queue& queue, int index, int count)
   for (size_t i(index), end(index+count); i!=end; ++i) {
     const TaskArticle * task (dynamic_cast<const TaskArticle*>(queue[i]));
     if (task)
-      rebuild_article_action (task->get_article().message_id);
+      rebuild_article_action (task->get_article().get_message_id());
   }
 }
 
@@ -2066,7 +2066,7 @@ HeaderPane :: on_queue_task_removed (Queue&, Task& task, int)
 {
   const TaskArticle * ta (dynamic_cast<const TaskArticle*>(&task));
   if (ta)
-    rebuild_article_action (ta->get_article().message_id);
+    rebuild_article_action (ta->get_article().get_message_id());
 }
 void
 HeaderPane :: on_cache_added (const Quark& message_id)
@@ -2091,7 +2091,7 @@ struct HeaderPane::SimilarWalk: public PanTreeStore::WalkFunctor
 {
   private:
     GtkTreeSelection * selection;
-    const Article source;
+    const Article & source;
 
   public:
     virtual ~SimilarWalk() {}
@@ -2112,7 +2112,7 @@ struct HeaderPane::SimilarWalk: public PanTreeStore::WalkFunctor
     {
       // same author, posted within a day and a half of the source, with a similar subject
       static const size_t SECONDS_IN_DAY (60 * 60 * 24);
-      return (a.author == source.author)
+      return (a.get_author() == source.get_author())
 	&& (fabs (difftime (a.time_posted, source.time_posted)) < (SECONDS_IN_DAY * 1.5))
 	&& (subjects_are_similar (a, source));
     }
@@ -2120,8 +2120,8 @@ struct HeaderPane::SimilarWalk: public PanTreeStore::WalkFunctor
     static bool subjects_are_similar (const Article& a, const Article& b)
     {
       // make our own copies of the strings so that we can mutilate them
-      std::string sa (a.subject.c_str());
-      std::string sb (b.subject.c_str());
+      std::string sa (a.get_subject().c_str());
+      std::string sb (b.get_subject().c_str());
 
       // strip out frequent substrings that tend to skew string_likeness too high
       static const char * const frequent_substrings [] = { "mp3", "gif", "jpg", "jpeg", "yEnc" };

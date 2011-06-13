@@ -394,7 +394,7 @@ DataImpl :: MyTree :: add_articles (const const_nodes_v& nodes_in)
   foreach_const (const_nodes_v, nodes, it) {
     const Article * a ((*it)->_article);
     ArticleNode * node (_node_chunk.alloc());
-    node->_mid = a->message_id;
+    node->_mid = a->get_message_id();
     node->_article = const_cast<Article*>(a);
     //std::cerr << LINE_ID << " added " << node->_mid << " to the tree\n";
     std::pair<nodes_t::iterator,bool> result (

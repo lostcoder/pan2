@@ -38,7 +38,7 @@ Article :: get_part_state () const
     part_state = SINGLE;
 
   // someone's posted a followup to a multipart
-  else if (!is_line_count_ge(250) && has_reply_leader(subject.to_view()))
+  else if (!is_line_count_ge(250) && has_reply_leader(get_subject().to_view()))
     part_state = SINGLE;
 
   else  {
@@ -104,12 +104,18 @@ Article :: get_part_mids () const
 void
 Article :: clear ()
 {
-  message_id.clear ();
-  author.clear ();
-  subject.clear ();
   time_posted = 0;
   xref.clear ();
   score = 0;
   parts.clear ();
   is_binary = false;
 }
+
+void ArticleNZB :: clear()
+{
+  Article::clear ();
+  message_id.clear ();
+  subject.clear ();
+  author.clear ();
+}
+

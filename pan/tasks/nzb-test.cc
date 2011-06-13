@@ -35,10 +35,23 @@ struct MyArticleRead: public ArticleRead
   virtual void mark_read (const Article**, unsigned long, bool) {}
 };
 
-
-int main ()
+struct Fixture
 {
-  const char * test_1 =
+  std::map<Quark,quarks_t> gmap;
+  MyServerRank ranks;
+  MyGroupServer gs;
+
+  ArticleCache cache;
+  MyArticleRead read;
+  std::vector<Task*> tasks;
+
+  Fixture();
+  ~Fixture();
+};
+
+Fixture::Fixture():gs(gmap), cache("/tmp")
+{
+  static const char * test_1 =
      "<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?>\n"
      "<!DOCTYPE nzb PUBLIC \"-//newzBin//DTD NZB 1.0//EN\" \"http://www.newzbin.com/DTD/nzb/nzb-1.0.dtd\">\n"
      "<nzb xmlns=\"http://www.newzbin.com/DTD/2003/nzb\">\n"
@@ -53,48 +66,76 @@ int main ()
      "   </segments>\n"
      " </file>\n"
      "</nzb>";
+  StringView v (test_1);
 
-  std::map<Quark,quarks_t> gmap;
   gmap["alt.binaries.newzbin"].insert ("giganews");
   gmap["alt.binaries.newzbin"].insert ("cox");
   gmap["alt.binaries.mojo"].insert ("giganews");
-  MyServerRank ranks;
-  MyGroupServer gs (gmap);
 
-  ArticleCache cache ("/tmp");
-  MyArticleRead read;
-  StringView v (test_1);
-  std::vector<Task*> tasks;
-  NZB :: tasks_from_nzb_string (v, StringView("/tmp"), cache, read, ranks, gs, tasks);
-  check (tasks.size() == 1)
-  const Article a (dynamic_cast<TaskArticle*>(tasks[0])->get_article());
-  check (a.author == "Joe Bloggs <bloggs@nowhere.example>")
-  check (a.subject == "Here's your file!  abc-mr2a.r01 (1/2)")
-  check (a.get_total_part_count() == 2)
-  check (a.get_found_part_count() == 2)
-  check (a.message_id == "<123456789abcdef@news.newzbin.com>")
-  check (a.time_posted == 1071674882)
-  check (a.xref.size() == 3)
+  NZB :: tasks_from_nzb_string (v, StringView("/tmp"), cache,
+      read, ranks, gs, tasks);
+}
+
+void setup(gpointer fixture, gconstpointer user_data)
+{
+  Fixture *self  = new(fixture) Fixture;
+}
+
+Fixture::~Fixture()
+{
+  for (std::vector<Task*>::iterator it(tasks.begin()),
+       end(tasks.end()); it!=end; ++it)
+    delete *it;
+}
+
+void teardown(gpointer fixture, gconstpointer user_data)
+{
+  reinterpret_cast<Fixture*>(fixture)->~Fixture();
+}
+
+void test_nzbin(gpointer fixture, gconstpointer user_data)
+{
+  Fixture &self (*reinterpret_cast<Fixture*>(fixture));
+
+  g_assert_cmpint (self.tasks.size(), ==, 1);
+  const Article & a (dynamic_cast<TaskArticle*>(self.tasks[0])->get_article());
+  g_assert_cmpstr (a.get_author().c_str(), ==,
+      "Joe Bloggs <bloggs@nowhere.example>");
+  g_assert_cmpstr (a.get_subject().c_str(), ==,
+      "Here's your file!  abc-mr2a.r01 (1/2)");
+  g_assert_cmpint (a.get_total_part_count(), ==, 2);
+  g_assert_cmpint (a.get_found_part_count(), ==, 2);
+  g_assert_cmpstr (a.get_message_id().c_str(), ==,
+      "<123456789abcdef@news.newzbin.com>");
+  g_assert_cmpint (a.time_posted, ==, 1071674882);
+  g_assert_cmpint (a.xref.size(), ==, 3);
+
   std::string part_mid;
   Parts::bytes_t part_bytes;
-  check (a.get_part_info (1u, part_mid, part_bytes))
-  check (part_bytes == 102394)
-  check (part_mid == "<123456789abcdef@news.newzbin.com>")
+  g_assert (a.get_part_info (1u, part_mid, part_bytes));
+  g_assert_cmpint (part_bytes, ==, 102394);
+  g_assert_cmpstr (part_mid.c_str(), ==,
+      "<123456789abcdef@news.newzbin.com>");
+
   Quark group;
   uint64_t number;
-  check (a.xref.find ("cox", group, number))
-  check (group == "alt.binaries.newzbin")
-  check (number == 0)
-  check (a.xref.find ("giganews", group, number))
-  check (group=="alt.binaries.newzbin" || group=="alt.binaries.mojo")
-  check (number==0)
-  check (a.get_part_info (2, part_mid, part_bytes))
-  check (part_bytes == 4501)
+  g_assert (a.xref.find ("cox", group, number));
+  g_assert_cmpstr (group.c_str(), ==, "alt.binaries.newzbin");
+  g_assert_cmpint (number, ==, 0);
+  g_assert (a.xref.find ("giganews", group, number));
+  g_assert (group=="alt.binaries.newzbin" || group=="alt.binaries.mojo");
+  g_assert_cmpint (number, ==, 0);
+  g_assert (a.get_part_info (2, part_mid, part_bytes));
+  g_assert_cmpint (part_bytes, ==, 4501);
+}
 
+void test_nzbout(gpointer fixture, gconstpointer user_data)
+{
+  Fixture &self (*reinterpret_cast<Fixture*>(fixture));
   std::ostringstream out_stream;
-  NZB :: nzb_to_xml (out_stream, tasks);
+  NZB :: nzb_to_xml (out_stream, self.tasks);
   std::string out (out_stream.str ());
-  std::string expected =
+  static const char *expected =
     "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n"
     "<!DOCTYPE nzb PUBLIC \"-//newzBin//DTD NZB 1.0//EN\" \"http://www.newzbin.com/DTD/nzb/nzb-1.0.dtd\">\n"
     "<nzb xmlns=\"http://www.newzbin.com/DTD/2003/nzb\">\n"
@@ -110,11 +151,20 @@ int main ()
     "    </segments>\n"
     "  </file>\n"
     "</nzb>\n";
-  check (out == expected)
+  g_assert_cmpstr (out.c_str(), ==, expected);
+}
 
-
-  for (std::vector<Task*>::iterator it(tasks.begin()), end(tasks.end()); it!=end; ++it)
-    delete *it;
-
-  return 0;
+int main (int argc, char **argv)
+{
+  g_test_init(&argc, &argv, NULL);
+  GTestSuite *s1 (g_test_create_suite("pan"));
+  GTestSuite *suite (g_test_create_suite("nzb"));
+  g_test_suite_add_suite (g_test_get_root(), s1);
+  g_test_suite_add_suite (s1, suite);
+  g_test_suite_add ( suite, g_test_create_case ("nzb_in", sizeof(Fixture),
+        NULL, setup, test_nzbin, teardown));
+  g_test_suite_add ( suite, g_test_create_case ("nzb_out", sizeof(Fixture),
+        NULL, setup, test_nzbout, teardown));
+  //return g_test_run_suite (s1);
+  return g_test_run();
 }

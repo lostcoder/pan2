@@ -291,6 +291,40 @@ namespace pan
 
     private: // implementation
 
+      class ArticleImpl: public Article
+      {
+        public:
+          Quark message_id;
+          Quark author;
+          Quark subject;
+          ArticleImpl() {}
+          Quark get_message_id() const
+          {
+            return message_id;
+          }
+          Quark get_author() const
+          {
+            return author;
+          }
+          Quark get_subject() const
+          {
+            return subject;
+          }
+          ArticleCPtr clone() const
+          {
+            ArticleCPtr ret(new ArticleImpl);
+            *ret = *this;
+            return ret;
+          }
+          void clear()
+          {
+            Article::clear();
+            message_id.clear();
+            author.clear();
+            subject.clear();
+          }
+      };
+
       /** 'article' MUST have been allocated by GroupHeaders::alloc_new_article()!! */
       void load_article (const Quark& g, Article * article, const StringView& references);
 
@@ -358,14 +392,14 @@ namespace pan
         int _ref;
         bool _dirty;
         nodes_t _nodes;
-        MemChunk<Article> _art_chunk;
+        MemChunk<ArticleImpl> _art_chunk;
         MemChunk<ArticleNode> _node_chunk;
 
         GroupHeaders();
         ~GroupHeaders ();
 
-        Article& alloc_new_article () {
-          static const Article blank_article;
+        ArticleImpl& alloc_new_article () {
+          static const ArticleImpl blank_article;
           _art_chunk.push_back (blank_article);
           return _art_chunk.back();
         }

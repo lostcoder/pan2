@@ -89,7 +89,7 @@ namespace pan
       ArticleCache& _cache;
       ArticleRead& _read;
       quarks_t _servers;
-      const Article _article;
+      ArticleNZB _article;
       const time_t _time_posted;
 
     private: // implementation

@@ -182,7 +182,7 @@ DataImpl :: xover_ref (const Quark& group)
     const Quark& mid (it->first);
     const Article * a (it->second->_article);
     if (a != 0)
-      workarea._subject_lookup.insert (std::pair<Quark,Quark>(a->subject,mid));
+      workarea._subject_lookup.insert (std::pair<Quark,Quark>(a->get_subject(),mid));
   }
 }
 
@@ -268,7 +268,7 @@ DataImpl :: xover_add (const Quark         & server,
     const std::pair<cit,cit> range (workarea._subject_lookup.equal_range (multipart_subject_quark));
     for (cit it(range.first), end(range.second); it!=end && art_mid.empty(); ++it) {
       const Quark& candidate_mid (it->second);
-      const Article* candidate (h->find_article (candidate_mid));
+      const ArticleImpl* candidate (static_cast<ArticleImpl*>(h->find_article (candidate_mid)));
       if (candidate
           && (candidate->author == author)
           && ((int)candidate->get_total_part_count() == part_count))
@@ -287,7 +287,7 @@ DataImpl :: xover_add (const Quark         & server,
     if (!h->find_article (art_mid))
     {
       //std::cerr << LINE_ID << " We didn't have this article yet, so creating an instance..." << std::endl;
-      Article& a (h->alloc_new_article());
+      ArticleImpl& a (h->alloc_new_article());
       a.author = author;
       a.subject = multipart_subject_quark;
       a.message_id = art_mid;

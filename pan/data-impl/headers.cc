@@ -136,7 +136,7 @@ void
 DataImpl :: GroupHeaders :: build_references_header (const Article* article, std::string& setme) const
 {
   setme.clear ();
-  const Quark& message_id (article->message_id);
+  const Quark& message_id (article->get_message_id());
   const ArticleNode * node (find_node (message_id));
   while (node && node->_parent) {
     node = node->_parent;
@@ -253,7 +253,7 @@ DataImpl :: load_article (const Quark       & group,
   pan_return_if_fail (h!=0);
 
   // populate the current node
-  const Quark& mid (article->message_id);
+  const Quark& mid (article->get_message_id());
   ArticleNode * node (h->_nodes[mid]);
   if (!node) {
     static const ArticleNode blank_node;
@@ -349,7 +349,7 @@ DataImpl :: load_article (const Quark       & group,
   }
 
   // recursion?
-  assert (find_ancestor(article_node, article->message_id) == 0);
+  assert (find_ancestor(article_node, article->get_message_id()) == 0);
 }
 
 #if 0
@@ -480,7 +480,7 @@ DataImpl :: load_headers (const DataIO   & data_io,
         if (s.empty() || *s.str!='<') // not a message-id...
           continue;
 
-        Article& a (h->alloc_new_article());
+        ArticleImpl& a (h->alloc_new_article());
         a.message_id = s;
 
         // subject line
@@ -731,7 +731,7 @@ DataImpl :: save_headers (DataIO                       & data_io,
     // author lookup section
     frequency.clear ();
     foreach_const (std::vector<Article*>, articles, ait)
-      ++frequency[(*ait)->author];
+      ++frequency[(*ait)->get_author()];
     QuarkToSymbol author_qts;
     build_qts (frequency, author_qts);
     author_qts.write (out, "author shorthand count");
@@ -744,13 +744,13 @@ DataImpl :: save_headers (DataIO                       & data_io,
       ++article_count;
 
       const Article * a (*ait);
-      const Quark& message_id (a->message_id);
+      const Quark& message_id (a->get_message_id());
       h->build_references_header (a, references);
 
       // message-id, subject, author
       out << message_id << "\n\t"
-          << a->subject << "\n\t"
-          << author_qts(a->author) << "\n\t";
+          << a->get_subject ()<< "\n\t"
+          << author_qts(a->get_author()) << "\n\t";
       // references line *IF* the article has a References header
       if (!references.empty())
         out << references << "\n\t";
@@ -871,7 +871,7 @@ DataImpl :: mark_read (const Article  ** articles,
     foreach_const (Xref, article->xref, xit) {
       const bool old_state (_read_groups[xit->group][xit->server]._read.mark_one (xit->number, read));
       if (!old_state != !read)
-        group_to_changed_mids[xit->group].insert (article->message_id);
+        group_to_changed_mids[xit->group].insert (article->get_message_id());
     }
   }
 
@@ -1091,8 +1091,8 @@ DataImpl :: delete_articles (const unique_articles_t& articles)
       PerGroup& per (per_groups[*git]);
       ++per.count;
       if (!was_read) ++per.unread;
-      per.mids.insert (article->message_id);
-      all_mids.insert (article->message_id);
+      per.mids.insert (article->get_message_id());
+      all_mids.insert (article->get_message_id());
     }
   }
 

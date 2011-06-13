@@ -564,13 +564,8 @@ void GUI :: do_save_articles ()
   std::string path;
   const std::vector<const Article*> articles (_header_pane->get_full_selection_v ());
 
-  std::vector<Article> copies;
-  copies.reserve (articles.size());
-  foreach_const (std::vector<const Article*>, articles, it)
-    copies.push_back (**it);
-
-  if (!copies.empty()) {
-    SaveDialog * dialog = new SaveDialog (_prefs, _group_prefs, _data, _data, _cache, _data, _queue, get_window(_root), _header_pane->get_group(), copies);
+  if (!articles.empty()) {
+    SaveDialog * dialog = new SaveDialog (_prefs, _group_prefs, _data, _data, _cache, _data, _queue, get_window(_root), _header_pane->get_group(), articles);
     gtk_widget_show (dialog->root());
   }
 }
@@ -582,17 +577,12 @@ void GUI :: do_save_articles_to_nzb ()
   std::string path;
   const std::vector<const Article*> articles (_header_pane->get_full_selection_v ());
 
-  std::vector<Article> copies;
-  copies.reserve (articles.size());
-  foreach_const (std::vector<const Article*>, articles, it)
-    copies.push_back (**it);
-
   const std::string file (GUI :: prompt_user_for_filename (get_window(_root), _prefs));
     if (!file.empty()) {
       Queue::tasks_t tasks;
       std::string emptystring;
-      foreach_const (std::vector<Article>, copies, it)
-        tasks.push_back (new TaskArticle (_data, _data, *it, _cache, _data, 0, TaskArticle::RAW,emptystring));
+      foreach_const (std::vector<const Article*>, articles, it)
+        tasks.push_back (new TaskArticle (_data, _data, **it, _cache, _data, 0, TaskArticle::RAW,emptystring));
     
           // write them to a file
           std::ofstream tmp(file.c_str());
@@ -612,14 +602,17 @@ namespace
     GtkWidget * _root;
     Prefs& _prefs;
     ArticleCache& _cache;
-    const Article _article;
+    const ArticleNZB _article;
     const std::string _path;
 
     SaveArticlesFromNZB (Data& d, Queue& q, GtkWidget *r, Prefs& p,
-                         ArticleCache& c, const Article& a, const std::string& path):
-      _data(d), _queue(q), _root(r), _prefs(p), _cache(c), _article(a), _path(path) {}
+                         ArticleCache& c, const Article& a,
+                         const std::string& path):
+      _data(d), _queue(q), _root(r), _prefs(p), _cache(c), _article(a),
+      _path(path) {}
 
-    static void foreach_part_cb (GMimeObject */*parent*/, GMimeObject *o, gpointer self)
+    static void foreach_part_cb (GMimeObject */*parent*/, GMimeObject *o,
+                                 gpointer self)
     {
       static_cast<SaveArticlesFromNZB*>(self)->foreach_part (o);
     }
@@ -1014,7 +1007,7 @@ void GUI :: set_selected_thread_score (int score)
   StringView v(references), tok;
   v.pop_token (tok);
   if (tok.empty())
-    tok = article->message_id.c_str();
+    tok = article->get_message_id().c_str();
 
   // if this is the article or a descendant...
   Scorefile::AddItem items[2];
@@ -1052,12 +1045,9 @@ GUI :: score_add (int mode)
   if (group.empty())
     group = _group_pane->get_first_selection();
 
-  Article a;
   const Article* article (_header_pane->get_first_selected_article ());
-  if (article != 0)
-    a = *article;
 
-  ScoreAddDialog * d = new ScoreAddDialog (_data, _root, group, a, (ScoreAddDialog::Mode)mode);
+  ScoreAddDialog * d = new ScoreAddDialog (_data, _root, group, *article, (ScoreAddDialog::Mode)mode);
   gtk_widget_show (d->root());
 }
 
@@ -1205,7 +1195,7 @@ void GUI :: do_delete_article ()
 
   const Quark mid (_body_pane->get_message_id());
   foreach_const (std::set<const Article*>, articles, it)
-    if ((*it)->message_id == mid)
+    if ((*it)->get_message_id() == mid)
       _body_pane->clear ();
 }
 
@@ -1543,8 +1533,8 @@ void GUI :: do_show_selected_article_info ()
         "<b>%s</b>: %lu\n" "<b>%s</b>: %lu\n"
         "\n"
         "%s" "%s",
-        _("Subject"), a->subject.c_str(), _("From"), a->author.c_str(),
-        _("Date"), date, _("Message-ID"), a->message_id.c_str(),
+        _("Subject"), a->get_subject().c_str(), _("From"), a->get_author().c_str(),
+        _("Date"), date, _("Message-ID"), a->get_message_id().c_str(),
         _("Lines"), a->get_line_count(), _("Bytes"), a->get_byte_count(),
         msg, s.str().c_str());
     g_signal_connect_swapped (w, "response", G_CALLBACK (gtk_widget_destroy), w);

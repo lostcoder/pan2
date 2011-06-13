@@ -143,11 +143,12 @@ SaveDialog :: response_cb (GtkDialog * dialog,
 
     // make the tasks... 
     Queue::tasks_t tasks;
-    foreach_const (std::vector<Article>, self->_articles, it)
+    foreach_const (std::vector<ArticleNZB>, self->_articles, it)
     {
       if (subject_in_path)
-        path = expand_download_dir_subject(opath.c_str(), it->subject, sep);
-      tasks.push_back (new TaskArticle (self->_server_rank,
+        path = expand_download_dir_subject(opath.c_str(), it->get_subject(), sep);
+      //tasks.push_back (*it);
+         tasks.push_back (new TaskArticle (self->_server_rank,
                                         self->_group_server,
                                         *it,
                                         self->_cache,
@@ -253,7 +254,7 @@ SaveDialog :: SaveDialog (Prefs                       & prefs,
                           Queue                       & queue,
                           GtkWindow                   * parent_window,
                           const Quark                 & group,
-                          const std::vector<Article>  & articles):
+                          const std::vector<const Article*>  & articles):
   _prefs(prefs),
   _server_rank (server_rank),
   _group_server (group_server),
@@ -263,9 +264,12 @@ SaveDialog :: SaveDialog (Prefs                       & prefs,
   _group (group),
   _root (0),
   _save_custom_path_radio (0),
-  _save_group_path_radio (0),
-  _articles (articles)
+  _save_group_path_radio (0)
 {
+  _articles.reserve (articles.size () );
+  foreach_const (std::vector<const Article*>, articles, it)
+    _articles.push_back (ArticleNZB (**it) );
+
   GtkWidget * dialog = gtk_dialog_new_with_buttons (_("Pan: Save Articles"),
                                                     parent_window,
                                                     GTK_DIALOG_DESTROY_WITH_PARENT,

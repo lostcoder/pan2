@@ -1176,14 +1176,14 @@ BodyPane :: refresh ()
 void
 BodyPane :: set_article (const Article& a)
 {
-  _article = a;
+  _article = &a;
 
   if (_message)
     g_object_unref (_message);
-  _message = _cache.get_message (_article.get_part_mids());
+  _message = _cache.get_message (_article->get_part_mids());
   refresh ();
 
-  _data.mark_read (_article);
+  _data.mark_read (*_article);
 }
 
 void
