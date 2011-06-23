@@ -618,7 +618,7 @@ PrefsDialog :: PrefsDialog (Prefs& prefs, GtkWindow* parent):
   HIG :: workarea_add_section_spacer (t, row, 4);
   w = new_check_button (_("Append Subject to all Posts"), "upload-queue-append-subject-enabled", false, prefs);
   HIG :: workarea_add_wide_control (t, &row, w);
-  HIG :: workarea_add_section_title (t, &row, _("Upload Subject Line Appearance"));
+  HIG :: workarea_add_section_title (t, &row, _("Encoding options"));
   HIG :: workarea_add_section_spacer (t, row, 4);
   w = new_spin_button ("upload-option-lpf", 5000, 50000, prefs);
   l = gtk_label_new(_("Default Lines per File (for yEnc Encoder)"));
