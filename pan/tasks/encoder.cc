@@ -87,7 +87,7 @@ Encoder :: ~Encoder()
 void
 Encoder :: enqueue (TaskUpload                      * task,
                     EncodeCache                     * cache,
-                    Article                         * article,
+                    ArticleNZB                      * article,
                     std::string                     & filename,
                     std::string                     & basename,
                     std::string                     & groups,
@@ -154,7 +154,7 @@ Encoder :: do_work()
       PartBatch batch;
       batch.init(StringView(basename), needed->size(), 0);
       int cnt(1);
-      Article* tmp = article;
+      ArticleNZB* tmp = article;
 
       /* build real subject line */
       g_snprintf(buf, sizeof(buf), "\"%s\" - %s (/%03d)", basename.c_str(), subject.c_str(), (int)needed->size());

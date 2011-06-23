@@ -57,7 +57,7 @@ namespace pan
         int lpf;
       };
 
-      const Article& get_article ()  { return _article; }
+      const ArticleNZB& get_article ()  { return _article; }
 
       typedef std::vector<Quark> mid_sequence_t;
 
@@ -85,7 +85,7 @@ namespace pan
       TaskUpload ( const std::string         & filename,
                    const Quark               & server,
                    EncodeCache               & cache,
-                   Article                     article,
+                   ArticleNZB                  article,
                    UploadInfo                  format,
                    needed_t                  & imported,
                    Progress::Listener        * listener= 0,
@@ -139,10 +139,10 @@ namespace pan
       unsigned long _bytes;
       EncodeCache& _cache;
       std::deque<Log::Entry> _logfile;   // for intermediate updates
-      Article _article;
+      ArticleNZB _article;
       std::string _domain;
       unsigned long _all_bytes;
-      std::vector<Article*> _upload_list;
+      std::vector<ArticleNZB*> _upload_list;
       std::string _save_file;
       Article::mid_sequence_t _mids;
       int _queue_pos;

@@ -614,8 +614,6 @@ namespace
     SaveArticlesFromNZB (Data& d, Queue& q, GtkWidget *r, Prefs& p,
                          ArticleCache& c, EncodeCache& ec, const Article& a, const std::string& path):
       _data(d), _queue(q), _root(r), _prefs(p), _cache(c), _encode_cache(ec), _article(a), _path(path) {}
-      _data(d), _queue(q), _root(r), _prefs(p), _cache(c), _article(a),
-      _path(path) {}
 
     static void foreach_part_cb (GMimeObject */*parent*/, GMimeObject *o, gpointer self)
     {

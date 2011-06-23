@@ -89,7 +89,7 @@ TaskUpload :: get_domain(const StringView& mid)
 TaskUpload :: TaskUpload (const std::string         & filename,
                           const Quark               & server,
                           EncodeCache               & cache,
-                          Article                     article,
+                          ArticleNZB                  article,
                           UploadInfo                  format,
                           needed_t                  & imported,
                           Progress::Listener        * listener,

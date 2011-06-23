@@ -2818,7 +2818,7 @@ PostUI :: prompt_user_for_queueable_files (GtkWindow * parent, const Prefs& pref
 
     for (; cur; cur = cur->next)
 		{
-		  Article a;
+		  ArticleNZB a;
 		  a.subject = subject;
 		  a.author = author;
       stat ((const char*)cur->data,&sb);

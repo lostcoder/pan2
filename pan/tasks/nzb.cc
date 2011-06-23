@@ -300,7 +300,7 @@ NZB :: nzb_to_xml (std::ostream             & out,
       if (task->get_save_path().empty()) // this task is for reading, not saving...
         continue;
 
-      const Article& a (task->get_article());
+      const ArticleNZB& a (task->get_article());
       out << indent(depth++)
           << "<file" << " poster=\"";
     escaped (out, a.get_author().to_view());
@@ -354,7 +354,7 @@ NZB :: nzb_to_xml (std::ostream             & out,
       // not an upload task, move on
       if (!task) continue;
 
-      const Article& a (task->get_article());
+      const ArticleNZB& a (task->get_article());
 
       //info: author, subject, load path, parts to encode / post
       out << indent(depth)
@@ -408,14 +408,14 @@ NZB :: nzb_to_xml (std::ostream             & out,
 /* Saves upload_list to XML file for distribution */
 std::ostream&
 NZB :: upload_list_to_xml_file (std::ostream& out,
-                   const std::vector<Article*> & tasks)
+                   const std::vector<ArticleNZB*> & tasks)
 {
 int depth (0);
 
-  foreach_const (std::vector<Article*>, tasks, it)
+  foreach_const (std::vector<ArticleNZB*>, tasks, it)
   {
-    Article * task (dynamic_cast<Article*>(*it));
-    const Article& a (*task);
+    ArticleNZB * task (dynamic_cast<ArticleNZB*>(*it));
+    const ArticleNZB& a (*task);
 
     out << indent(depth++)
         << "<file" << " poster=\"";
@@ -476,7 +476,7 @@ NZB :: nzb_to_xml_file (std::ostream             & out,
     if (!task) // not a download task, for example an upload task...
       continue;
 
-    const Article& a (task->get_article());
+    const ArticleNZB& a (task->get_article());
     out << indent(depth++)
         << "<file" << " poster=\"";
     escaped (out, a.get_author().to_view());
