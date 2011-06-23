@@ -419,9 +419,9 @@ int depth (0);
 
     out << indent(depth++)
         << "<file" << " poster=\"";
-    escaped (out, a.author.to_view());
+    escaped (out, a.get_author().to_view());
     out  << "\" date=\"" << a.time_posted << "\" subject=\"";
-    escaped (out, a.subject.to_view()) << "\">\n";
+    escaped (out, a.get_subject().to_view()) << "\">\n";
 
     // what groups was this crossposted in?
     quarks_t groups;
