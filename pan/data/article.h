@@ -22,6 +22,7 @@
 
 #include <ctime>
 #include <vector>
+#include <memory>
 #include <pan/general/sorted-vector.h>
 #include <pan/general/quark.h>
 #include <pan/data/parts.h>
@@ -48,27 +49,39 @@ namespace pan
   {
     public:
       void set_parts (const PartBatch& b) { parts.set_parts(b); }
-      bool add_part (Parts::number_t num, const StringView& mid, Parts::bytes_t bytes) { return parts.add_part(num,mid,bytes,message_id); }
-      void set_part_count (Parts::number_t num) { parts.set_part_count(num); }
-      Parts::number_t get_total_part_count () const { return parts.get_total_part_count(); }
-      Parts::number_t get_found_part_count () const { return parts.get_found_part_count(); }
+      bool add_part (Parts::number_t num, const StringView& mid,
+          Parts::bytes_t bytes)
+        { return parts.add_part(num,mid,bytes,get_message_id()); }
+      void set_part_count (Parts::number_t num)
+        { parts.set_part_count(num); }
+      Parts::number_t get_total_part_count () const
+        { return parts.get_total_part_count(); }
+      Parts::number_t get_found_part_count () const
+        { return parts.get_found_part_count(); }
       bool get_part_info (Parts::number_t      num,
                           std::string & mid,
-                          Parts::bytes_t     & bytes) const { return parts.get_part_info(num,mid,bytes,message_id); }
+                          Parts::bytes_t     & bytes) const
+        { return parts.get_part_info(num,mid,bytes,get_message_id()); }
 
       typedef Parts::const_iterator part_iterator;
-      part_iterator pbegin() const { return parts.begin(message_id); }
-      part_iterator pend() const { return parts.end(message_id); }
+      part_iterator pbegin() const { return parts.begin(get_message_id()); }
+      part_iterator pend() const { return parts.end(get_message_id()); }
 
       typedef std::vector<Quark> mid_sequence_t;
       mid_sequence_t get_part_mids () const;
       enum PartState { SINGLE, INCOMPLETE, COMPLETE };
       PartState get_part_state () const;
 
+    protected:
+      //Quark message_id;
+      //Quark author;
+      //Quark subject;
     public:
-      Quark message_id;
-      Quark author;
-      Quark subject;
+      virtual Quark get_message_id() const = 0;
+      virtual Quark get_author() const = 0;
+      virtual Quark get_subject() const = 0;
+
+    public:
       time_t time_posted;
       unsigned int lines;
       int score;
@@ -86,12 +99,50 @@ namespace pan
 
     public:
       Article (): time_posted(0), lines(0), score(0), is_binary(false)  {}
-      void clear ();
+      virtual ~Article () {};
+      virtual void clear ();
+
+      typedef std::auto_ptr<Article> ArticleCPtr;
 
     private:
       Parts parts;
 
   };
+
+  /**
+   * A Usenet article used by NZB and TaskArticle.
+   *
+   * @ingroup data
+   */
+  class ArticleNZB: public pan::Article
+  {
+    public:
+      Quark message_id;
+      Quark subject;
+      Quark author;
+
+      ArticleNZB() {}
+      ArticleNZB(const Article &a):Article(a),
+        message_id (a.get_message_id()),
+        subject (a.get_subject()),
+        author (a.get_author())
+        {}
+      void clear();
+      
+      Quark get_message_id() const
+      {
+        return message_id;
+      }
+      Quark get_subject() const
+      {
+        return subject;
+      }
+      Quark get_author() const
+      {
+        return author;
+      }
+  };
+
 }
 
 #endif

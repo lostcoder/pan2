@@ -48,11 +48,11 @@ namespace
     std::string text;
     std::string path;
     std::vector<std::string>  groups_str;  // TaskUpload
+    ArticleNZB a;
     TaskUpload::needed_t needed_parts;     // TaskUpload
     std::string domain;                    // TaskUpload
     std::string queue;
     int lpf;
-    Article a;
     PartBatch parts;
     tasks_t tasks;
     ArticleCache& cache;
@@ -303,9 +303,9 @@ NZB :: nzb_to_xml (std::ostream             & out,
       const Article& a (task->get_article());
       out << indent(depth++)
           << "<file" << " poster=\"";
-      escaped (out, a.author.to_view());
+    escaped (out, a.get_author().to_view());
       out  << "\" date=\"" << a.time_posted << "\" subject=\"";
-      escaped (out, a.subject.to_view()) << "\">\n";
+    escaped (out, a.get_subject().to_view()) << "\">\n";
 
       // path to save this to.
       // This isn't part of the nzb spec.
@@ -479,9 +479,9 @@ NZB :: nzb_to_xml_file (std::ostream             & out,
     const Article& a (task->get_article());
     out << indent(depth++)
         << "<file" << " poster=\"";
-    escaped (out, a.author.to_view());
+    escaped (out, a.get_author().to_view());
     out  << "\" date=\"" << a.time_posted << "\" subject=\"";
-    escaped (out, a.subject.to_view()) << "\">\n";
+    escaped (out, a.get_subject().to_view()) << "\">\n";
 
     // what groups was this crossposted in?
     quarks_t groups;

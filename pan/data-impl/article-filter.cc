@@ -33,10 +33,10 @@ ArticleFilter :: get_header (const Article& a, const Quark& header_name) const
 {
   static const StringView empty;
 
-  if (header_name == subject)    return a.subject.to_view ();
-  if (header_name == from)       return a.author.to_view ();
-  if (header_name == message_Id) return a.message_id.to_view ();
-  if (header_name == message_ID) return a.message_id.to_view ();
+  if (header_name == subject)    return a.get_subject().to_view ();
+  if (header_name == from)       return a.get_author().to_view ();
+  if (header_name == message_Id) return a.get_message_id().to_view ();
+  if (header_name == message_ID) return a.get_message_id().to_view ();
 
   std::cerr << LINE_ID << ' ' << PACKAGE_STRING << " is misparsing \"" << header_name << "\".\n"
             << "Please file a bug report to http://bugzilla.gnome.org/enter_bug.cgi?product=Pan\n";
@@ -58,7 +58,7 @@ ArticleFilter :: test_article (const Data        & data,
       pass = true;
       foreach_const (FilterInfo::aggregates_t, criteria._aggregates, it) {
         // assume test passes if test needs body but article not cached
-        if (!it->_needs_body || cache.contains(article.message_id) )
+        if (!it->_needs_body || cache.contains(article.get_message_id()) )
           if (!test_article (data, *it, group, article)) {
             pass = false;
             break;
@@ -73,7 +73,7 @@ ArticleFilter :: test_article (const Data        & data,
         pass = false;
         foreach_const (FilterInfo::aggregates_t, criteria._aggregates, it) {
           // assume test fails if test needs body but article not cached
-          if (!it->_needs_body || cache.contains(article.message_id) )
+          if (!it->_needs_body || cache.contains(article.get_message_id()) )
             if (test_article (data, *it, group, article)) {
               pass = true;
               break;
@@ -87,7 +87,7 @@ ArticleFilter :: test_article (const Data        & data,
       break;
 
     case FilterInfo::IS_POSTED_BY_ME:
-      pass = data.has_from_header (article.author.to_view());
+      pass = data.has_from_header (article.get_author().to_view());
       break;
 
     case FilterInfo::IS_UNREAD:
@@ -187,8 +187,8 @@ ArticleFilter :: test_article (const Data        & data,
           pass = criteria._text.test (get_header(article, criteria._header));
         else
         {
-          if (cache.contains(article.message_id)) {
-            ArticleCache::mid_sequence_t mid(1, article.message_id);
+          if (cache.contains(article.get_message_id())) {
+            ArticleCache::mid_sequence_t mid(1, article.get_message_id());
             GMimeMessage *msg = cache.get_message(mid);
             const char *hdr = g_mime_object_get_header(GMIME_OBJECT(msg), criteria._header);
             pass = criteria._text.test (hdr);
@@ -203,7 +203,7 @@ ArticleFilter :: test_article (const Data        & data,
       break;
 
     case FilterInfo::IS_CACHED:
-      pass = data.get_cache().contains (article.message_id);
+      pass = data.get_cache().contains (article.get_message_id());
       break;
 
     case FilterInfo::TYPE_ERR:

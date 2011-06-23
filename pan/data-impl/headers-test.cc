@@ -2,7 +2,6 @@
 #include <fstream>
 #include <string>
 #include <pan/general/log.h>
-#include <pan/general/test.h>
 #include <pan/general/time-elapsed.h>
 #include <pan/usenet-utils/filter-info.h>
 #include <pan/data/article.h>
@@ -10,64 +9,84 @@
 
 using namespace pan;
 
-int main ()
+DataImpl data (true);
+
+const Quark server ("w00tnewz");
+const Quark server2 ("l33tnews");
+const Quark group ("alt.religion.buddhism");
+
+void test_add_article()
 {
   Data::ArticleTree * tree;
   Data::ArticleTree::articles_t children;
   const Article * a;
 
-  DataImpl data (true);
-
-  const Quark server ("w00tnewz");
-  const Quark server2 ("l33tnews");
-  const Quark group ("alt.religion.buddhism");
-
   data.xover_ref (group);
 
   // TEST: can we add an article?
-  data.xover_add (server, group, "Subject", "Author", 0, "<article1@foo.com>", "", 40, 100, "");
+  data.xover_add (server, group, "Subject", "Author", 0,
+      "<article1@foo.com>", "", 40, 100, "");
   tree = data.group_get_articles (group);
-  check (tree->size() == 1ul)
+  g_assert_cmpint (tree->size(), ==, 1ul);
   a = tree->get_article ("<article1@foo.com>");
-  check (a != 0);
-  check (a->subject == "Subject")
-  check (a->message_id == "<article1@foo.com>")
-  check (tree->get_parent(a->message_id) == 0)
-  delete tree;
-
-  // TEST: can we add a child?
-  data.xover_add (server, group, "Re: Subject", "Author", 0, "<article2@blah.com>", "<article1@foo.com>", 40, 100, "");
-  tree = data.group_get_articles (group);
-  check (tree->size() == 2ul)
-  a = tree->get_article ("<article2@blah.com>");
-  check (a != 0)
-  check (a->subject == "Re: Subject")
-  check (a->author == "Author")
-  check (a->message_id == "<article2@blah.com>")
-  a = tree->get_parent (a->message_id);
-  check (a != 0)
-  check (a->message_id == "<article1@foo.com>")
-  check (a->subject == "Subject")
-  check (a->author == "Author")
-  check (tree->get_parent (a->message_id) == 0)
-  tree->get_children ("<article1@foo.com>", children);
-  check (children.size() == 1u)
-  check (children[0]->message_id == "<article2@blah.com>")
+  g_assert (a != 0);
+  g_assert_cmpstr (a->get_subject().c_str(), ==, "Subject");
+  g_assert_cmpstr (a->get_message_id().c_str(), ==, "<article1@foo.com>");
+  g_assert (tree->get_parent(a->get_message_id()) == 0);
   delete tree;
 
   data.xover_unref (group);
-
-
-  /****
-  *****
-  *****  XOVER + filtered tree
-  *****
-  ****/
-
-  a = 0;
   data.group_clear_articles (group);
-  data.xover_ref (group);
+}
 
+void test_add_child()
+{
+  Data::ArticleTree * tree;
+  Data::ArticleTree::articles_t children;
+  const Article * a;
+
+  data.xover_ref (group);
+  data.xover_add (server, group, "Subject", "Author", 0,
+      "<article1@foo.com>", "", 40, 100, "");
+
+  // TEST: can we add a child?
+  data.xover_add (server, group, "Re: Subject", "Author", 0,
+      "<article2@blah.com>", "<article1@foo.com>", 40, 100, "");
+  tree = data.group_get_articles (group);
+  g_assert_cmpint (tree->size(), ==, 2ul);
+  a = tree->get_article ("<article2@blah.com>");
+  g_assert (a != 0);
+  g_assert_cmpstr (a->get_subject().c_str(), ==, "Re: Subject");
+  g_assert_cmpstr (a->get_author().c_str(), ==, "Author");
+  g_assert_cmpstr (a->get_message_id().c_str(), ==, "<article2@blah.com>");
+  a = tree->get_parent (a->get_message_id());
+  g_assert (a != 0);
+  g_assert_cmpstr (a->get_subject().c_str(), ==, "Subject");
+  g_assert_cmpstr (a->get_message_id().c_str(), ==, "<article1@foo.com>");
+  g_assert_cmpstr (a->get_author().c_str(), ==, "Author");
+  g_assert (tree->get_parent (a->get_message_id()) == 0);
+  tree->get_children ("<article1@foo.com>", children);
+  g_assert_cmpint (children.size(), ==, 1u);
+  g_assert_cmpstr (children[0]->get_message_id().c_str(), ==,
+      "<article2@blah.com>");
+  delete tree;
+
+  data.xover_unref (group);
+  data.group_clear_articles (group);
+}
+
+/****
+*****
+*****  XOVER + filtered tree
+*****
+****/
+void test_filter()
+{
+  Data::ArticleTree * tree;
+  Data::ArticleTree::articles_t children;
+  const Article * a;
+
+  data.xover_ref (group);
   // match articles whose subject has the letter 'a'
   TextMatch::Description description;
   description.type = TextMatch::CONTAINS;
@@ -78,23 +97,40 @@ int main ()
   // show articles whose subject has the letter 'a'
   tree = data.group_get_articles (group);
   tree->set_filter (Data::SHOW_ARTICLES, &filter_info);
-  check (tree->size() == 0ul);
+  g_assert_cmpint (tree->size(), ==, 0ul);
 
   // TEST: add an article that passes the test and it appears
-  data.xover_add (server, group, "a subject", "Author", 0, "<article1@foo.com>", "", 40, 100, "");
+  data.xover_add (server, group, "a subject", "Author", 0,
+      "<article1@foo.com>", "", 40, 100, "");
   data.xover_flush (group);
-  check (tree->size() == 1ul)
+  g_assert_cmpint (tree->size(), ==, 1ul);
   a = tree->get_article ("<article1@foo.com>");
-  check (a != 0);
-  check (a->message_id == "<article1@foo.com>")
+  g_assert (a != 0);
+  g_assert_cmpstr (a->get_message_id().c_str(), ==, "<article1@foo.com>");
 
   // TEST: add an article that doesn't pass the test and doesn't appear
-  data.xover_add (server, group, "subject two", "Author", 0, "<article2@foo.com>", "", 40, 100, "");
-  check (tree->size() == 1ul)
-  check (tree->get_article ("<article1@foo.com>") != 0);
-  check (tree->get_article ("<article2@foo.com>") == 0);
+  data.xover_add (server, group, "subject two", "Author", 0,
+      "<article2@foo.com>", "", 40, 100, "");
+  g_assert_cmpint (tree->size(), ==, 1ul);
+  g_assert (tree->get_article ("<article1@foo.com>") != 0);
+  g_assert (tree->get_article ("<article2@foo.com>") == 0);
 
   data.xover_unref (group);
+}
+
+int main (int argc, char **argv)
+{
+
+  g_test_init(&argc, &argv, NULL);
+  g_test_add_func("/pan/data-impl/add_article", test_add_article);
+  g_test_add_func("/pan/data-impl/add_child", test_add_child);
+  g_test_add_func("/pan/data-impl/filter", test_filter);
+
+  return g_test_run();
+}
+
+void foo()
+{
 
 #if 0
    //Quark q;
@@ -230,6 +266,4 @@ int main ()
 #endif
 #endif
 
-
-   return 0;
 }

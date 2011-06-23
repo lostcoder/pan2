@@ -47,7 +47,7 @@ namespace
   std::string get_description (const Article& article, bool save)
   {
     std::string stripped;
-    mime::remove_multipart_from_subject (article.subject.c_str(), stripped);
+    mime::remove_multipart_from_subject (article.get_subject().c_str(), stripped);
 
     char buf[1024];
     if (save)
@@ -112,7 +112,7 @@ TaskArticle :: TaskArticle (const ServerRank          & server_rank,
     // `ARTICLE message-id' instead when talking to the server.
     foreach_const (quarks_t, servers, sit)
       foreach_const (quarks_t, groups, git)
-        n.xref.insert (*sit, *git, mid==article.message_id.to_string() ? article.xref.find_number(*sit,*git) : 0);
+        n.xref.insert (*sit, *git, mid==article.get_message_id().to_string() ? article.xref.find_number(*sit,*git) : 0);
     _needed.push_back (n);
   }
 
@@ -120,9 +120,9 @@ TaskArticle :: TaskArticle (const ServerRank          & server_rank,
   init_steps (all_bytes);
   set_step (all_bytes - need_bytes);
   if (save_path.empty())
-    set_status (article.subject.c_str());
+    set_status (article.get_subject().c_str());
   else
-    set_status_va (_("Saving %s"), article.subject.c_str());
+    set_status_va (_("Saving %s"), article.get_subject().c_str());
 
   update_work ();
 }
@@ -285,7 +285,7 @@ TaskArticle :: on_nntp_done  (NNTP             * nntp,
              // an incomplete file gives us more PAR2 blocks than a missing one.
         Log :: add_err_va (
           _("Article \"%s\" is incomplete -- the news server(s) don't have part %s"),
-          _article.subject.c_str(),
+          _article.get_subject().c_str(),
           it->message_id.c_str());
         _needed.erase (it);
       }
@@ -312,7 +312,7 @@ TaskArticle :: use_decoder (Decoder* decoder)
   const Article::mid_sequence_t mids (_article.get_part_mids());
   const ArticleCache :: strings_t filenames (_cache.get_filenames (mids));
   _decoder->enqueue (this, _save_path, filenames, _save_mode);
-  set_status_va (_("Decoding %s"), _article.subject.c_str());
+  set_status_va (_("Decoding %s"), _article.get_subject().c_str());
   debug ("decoder thread was free, enqueued work");
 }
 

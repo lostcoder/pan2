@@ -65,7 +65,7 @@ namespace pan
 
     public:
       Quark get_message_id () const {
-        return _article.message_id;
+        return _article->get_message_id();
       }
       GMimeMessage* get_message () {
         if (_message)
@@ -114,7 +114,7 @@ namespace pan
       GtkWidget * _scroll;
       bool _hscroll_visible;
       bool _vscroll_visible;
-      Article _article;
+      const Article *_article;
       GMimeMessage * _message;
       TextMassager _tm;
       std::string _charset;

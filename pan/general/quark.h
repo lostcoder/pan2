@@ -46,6 +46,68 @@
 namespace pan
 {
   /**
+   * Paul Hsieh's "SuperFastHash" algorithm, from
+   * http://www.azillionmonkeys.com/qed/hash.html
+   */
+  struct StringViewHash
+  {
+    static uint16_t get16bits( const char * in )
+    {
+      return (in[0]<<8) | in[1];
+    }
+
+    size_t operator()(const char *data, int len) const
+    {
+      uint32_t tmp, hash=len;
+      if (len <= 0 || data == NULL) return 0;
+
+      int rem = len & 3;
+      len >>= 2;
+
+      /* Main loop */
+      for (;len > 0; len--) {
+          hash  += get16bits (data);
+          tmp    = (get16bits (data+2) << 11) ^ hash;
+          hash   = (hash << 16) ^ tmp;
+          data  += 2*sizeof (uint16_t);
+          hash  += hash >> 11;
+      }
+
+      /* Handle end cases */
+      switch (rem) {
+          case 3: hash += get16bits (data);
+                  hash ^= hash << 16;
+                  hash ^= data[sizeof (uint16_t)] << 18;
+                  hash += hash >> 11;
+                  break;
+          case 2: hash += get16bits (data);
+                  hash ^= hash << 11;
+                  hash += hash >> 17;
+                  break;
+          case 1: hash += *data;
+                  hash ^= hash << 10;
+                  hash += hash >> 1;
+      }
+
+      /* Force "avalanching" of final 127 bits */
+      hash ^= hash << 3;
+      hash += hash >> 5;
+      hash ^= hash << 4;
+      hash += hash >> 17;
+      hash ^= hash << 25;
+      hash += hash >> 6;
+
+      return hash;
+    }
+
+    size_t operator()(const StringView &s) const
+    {
+      return (*this)(s.str,s.len);
+    }
+  };
+
+
+  /**
    * A two-way association between a string and integral type identifier.
    *
    * Quarks make good keys because comparision operations can be done
@@ -81,70 +143,18 @@ namespace pan
         bool operator< (const Impl& b) const { return StringView(str,len) < StringView(b.str,b.len); }
       };
 
-      struct StringViewHash
+      struct ImplHash: public StringViewHash
       {
-        static uint16_t get16bits( const char * in )
+        size_t operator()(const Impl &s) const
         {
-          return (in[0]<<8) | in[1];
-        }
-
-        /**
-         * Paul Hsieh's "SuperFastHash" algorithm, from
-         * http://www.azillionmonkeys.com/qed/hash.html
-         */
-        size_t operator()(const Impl& s) const
-        {
-          const char * data (s.str);
-          int len (s.len);
-
-          uint32_t tmp, hash=len;
-          if (len <= 0 || data == NULL) return 0;
-
-          int rem = len & 3;
-          len >>= 2;
-
-          /* Main loop */
-          for (;len > 0; len--) {
-              hash  += get16bits (data);
-              tmp    = (get16bits (data+2) << 11) ^ hash;
-              hash   = (hash << 16) ^ tmp;
-              data  += 2*sizeof (uint16_t);
-              hash  += hash >> 11;
-          }
-
-          /* Handle end cases */
-          switch (rem) {
-              case 3: hash += get16bits (data);
-                      hash ^= hash << 16;
-                      hash ^= data[sizeof (uint16_t)] << 18;
-                      hash += hash >> 11;
-                      break;
-              case 2: hash += get16bits (data);
-                      hash ^= hash << 11;
-                      hash += hash >> 17;
-                      break;
-              case 1: hash += *data;
-                      hash ^= hash << 10;
-                      hash += hash >> 1;
-          }
-
-          /* Force "avalanching" of final 127 bits */
-          hash ^= hash << 3;
-          hash += hash >> 5;
-          hash ^= hash << 4;
-          hash += hash >> 17;
-          hash ^= hash << 25;
-          hash += hash >> 6;
-
-          return hash;
+          return static_cast<const StringViewHash&>(*this)(s.str, s.len);
         }
       };
 
-
 #if defined(HAVE_TR1_UNORDERED_SET)
-      typedef std::tr1::unordered_set<Impl, StringViewHash> lookup_t;
+      typedef std::tr1::unordered_set<Impl, ImplHash> lookup_t;
 #elif defined(HAVE_EXT_HASH_SET)
-      typedef __gnu_cxx::hash_set<Impl, StringViewHash> lookup_t;
+      typedef __gnu_cxx::hash_set<Impl, ImplHash> lookup_t;
 #else
       typedef std::set<Impl> lookup_t;
 #endif

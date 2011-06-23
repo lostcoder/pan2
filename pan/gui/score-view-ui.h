@@ -48,7 +48,7 @@ namespace pan
     private:
       Data& _data;
       const Quark _group;
-      const Article _article;
+      const Article &_article;
       GtkWidget * _root;
       GtkWidget * tree_view;
       GtkListStore * _store;
