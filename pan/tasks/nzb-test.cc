@@ -44,13 +44,14 @@ struct Fixture
 
   ArticleCache cache;
   MyArticleRead read;
+  EncodeCache e_cache;
   std::vector<Task*> tasks;
 
   Fixture();
   ~Fixture();
 };
 
-Fixture::Fixture():gs(gmap), cache("/tmp")
+Fixture::Fixture():gs(gmap), cache("/tmp"), e_cache("/tmp")
 {
   static const char * test_1 =
      "<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?>\n"
@@ -73,7 +74,7 @@ Fixture::Fixture():gs(gmap), cache("/tmp")
   gmap["alt.binaries.newzbin"].insert ("cox");
   gmap["alt.binaries.mojo"].insert ("giganews");
 
-  NZB :: tasks_from_nzb_string (v, StringView("/tmp"), cache,
+  NZB :: tasks_from_nzb_string (v, StringView("/tmp"), cache, e_cache,
       read, ranks, gs, tasks);
 }
 
