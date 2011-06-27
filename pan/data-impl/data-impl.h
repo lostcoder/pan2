@@ -305,15 +305,15 @@ namespace pan
           Quark author;
           Quark subject;
           ArticleImpl() {}
-          Quark get_message_id() const
+          const Quark& get_message_id() const
           {
             return message_id;
           }
-          Quark get_author() const
+          const Quark& get_author() const
           {
             return author;
           }
-          Quark get_subject() const
+          const Quark& get_subject() const
           {
             return subject;
           }

@@ -72,14 +72,10 @@ namespace pan
       enum PartState { SINGLE, INCOMPLETE, COMPLETE };
       PartState get_part_state () const;
 
-    protected:
-      //Quark message_id;
-      //Quark author;
-      //Quark subject;
     public:
-      virtual Quark get_message_id() const = 0;
-      virtual Quark get_author() const = 0;
-      virtual Quark get_subject() const = 0;
+      virtual const Quark& get_message_id() const = 0;
+      virtual const Quark& get_author() const = 0;
+      virtual const Quark& get_subject() const = 0;
 
     public:
       time_t time_posted;
@@ -129,15 +125,15 @@ namespace pan
         {}
       void clear();
       
-      Quark get_message_id() const
+      const Quark& get_message_id() const
       {
         return message_id;
       }
-      Quark get_subject() const
+      const Quark& get_subject() const
       {
         return subject;
       }
-      Quark get_author() const
+      const Quark& get_author() const
       {
         return author;
       }
